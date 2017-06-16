@@ -1,4 +1,6 @@
-# Set Up Nginx Server Blocks 
+#!/bin/bash
+
+DOMAIN=$1
 
 # Check update of package 
 sudo apt-get update
@@ -7,48 +9,41 @@ sudo apt-get update
 sudo apt-get install -y nginx
 
 # Step One — Set Up New Document Root Directories
-sudo mkdir -p /var/www/jointloop.ovh/html
-sudo mkdir -p /var/www/festivaldellastronomia.it/html
+sudo mkdir -p /var/www/$DOMAIN/html
 
 # Transfer ownership to our current user
-sudo chown -R $USER:$USER /var/www/jointloop.ovh/html
-sudo chown -R $USER:$USER /var/www/festivaldellastronomia.it/html
+sudo chown -R $USER:$USER /var/www/$DOMAIN/html
 
 # Make sure that permissions of our web roots are correct
 sudo chmod -R 755 /var/www
 
 # Step Two — Create Sample Pages for Each Site
-cd /var/www/jointloop.ovh/html/
+cd /var/www/$DOMAIN/html/
 touch index.html
 echo "<html>" >> index.html 
 echo "    <head>" >> index.html
-echo '        <title>Welcome to jointloop.ovh!</title>' >> index.html
+echo "        <title>Welcome to $DOMAIN!</title>" >> index.html
 echo "    </head>" >> index.html
 echo "    <body>" >> index.html
-echo '        <h1>Success!  The jointloop.ovh server block is working!</h1>' >> index.html
+echo "        <h1>Success!  The $DOMAIN server block is working!</h1>" >> index.html
 echo "    </body>" >> index.html
 echo "</html>" >> index.html
 
-# Since the file for second site is basically the same we can copy it
-cd 
-cp /var/www/jointloop.ovh/html/index.html /var/www/festivaldellastronomia.it/html/
-sed -i -e 's/jointloop.ovh/festivaldellastronomia.it/g' /var/www/festivaldellastronomia.it/html/index.html
-
 # Step Three — Create Server Block Files for Each Domain
-sudo cp /etc/nginx/sites-available/default /etc/nginx/sites-available/jointloop.ovh
-sudo sed -i -e 's/listen 80 default_server;/listen 80;/g' /etc/nginx/sites-available/jointloop.ovh
-sudo sed -i -e 's/listen [::]:80 default_server;/listen [::]:80;/g' /etc/nginx/sites-available/jointloop.ovh
-sudo sed -i -e 's,root /var/www/html;,root /var/www/jointloop.ovh/html;,g' /etc/nginx/sites-available/jointloop.ovh
-sudo sed -i -e 's/server_name _/server_name jointloop.ovh www.jointloop.ovh/g' /etc/nginx/sites-available/jointloop.ovh
-
-sudo cp /etc/nginx/sites-available/jointloop.ovh /etc/nginx/sites-available/festivaldellastronomia.it
-sudo sed -i -e 's,root /var/www/jointloop.ovh/html;,root /var/www/festivaldellastronomia.it/html;,g' /etc/nginx/sites-available/festivaldellastronomia.it
-sudo sed -i -e 's/server_name jointloop.ovh www.jointloop.ovh;/server_name festivaldellastronomia.it www.festivaldellastronomia.it;/g' /etc/nginx/sites-available/festivaldellastronomia.it
+sudo cp /etc/nginx/sites-available/default /etc/nginx/sites-available/$DOMAIN
+# remove default_server
+sudo sed -i -e 's/listen 80 default_server;/listen 80;/g' /etc/nginx/sites-available/$DOMAIN
+sudo sed -i -e 's/listen [::]:80 default_server;/listen [::]:80;/g' /etc/nginx/sites-available/$DOMAIN
+# set domain root folder for this server block
+sudo sed -i -e 's,root /var/www/html;,root /var/www/$DOMAIN/html;,g' /etc/nginx/sites-available/$DOMAIN
+# set server_name to domain
+sudo sed -i -e 's/server_name _/server_name $DOMAIN www.$DOMAIN/g' /etc/nginx/sites-available/$DOMAIN
 
 # Step Four — Enable your Server Blocks and Restart Nginx
-sudo ln -s /etc/nginx/sites-available/jointloop.ovh /etc/nginx/sites-enabled/
-sudo ln -s /etc/nginx/sites-available/festivaldellastronomia.it /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/$DOMAIN /etc/nginx/sites-enabled/
 
-sudo rm /etc/nginx/sites-enabled/default
+# remove default config Nginx form sites-enabled if it exists (it is available in sites-available) 
+stat /etc/nginx/sites/enabled/default && sudo rm /etc/nginx/sites-enabled/default
 
-sudo service nginx restart
+# Reload Nginx if it works
+sudo nginx -t && sudo service nginx reload
