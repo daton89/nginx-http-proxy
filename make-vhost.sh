@@ -15,3 +15,5 @@ exit 1
 fi
 
 echo "------------- Building of new vhost: $1 started! --------------"
+
+
